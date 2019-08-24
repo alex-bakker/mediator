@@ -3,10 +3,13 @@ from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy(app)
 
-class User(db.Model):
-    __tablename__ = 'user'
+class Score(db.Model):
+    __tablename__ = 'score'
 
     id = db.Column(db.Integer, primary_key=True)
-    average_postive = db.Column(db.Integer, nullable=False)
-    average_neutral = db.Column(db.Integer, nullable=False)
-    average_negative = db.Column(db.Integer, nullable=False)
+    daily_average = db.Column(db.Integer, nullable=False)
+    date = db.Column(db.Date, nullable=False)
+    name = db.Column(db.Text, nullable=False)
+    channel = db.Column(db.Text, nullable=False)
+
+    
