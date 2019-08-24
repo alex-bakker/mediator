@@ -1,7 +1,9 @@
 from flask import Blueprint, request
 
-scores = Blueprint('slackapi', __name__)
+slackapi = Blueprint('slackapi', __name__)
 
-@scores.route('/', methods=['POST'])
-def updateScore():
-    pass
+@slackapi.route('/', methods=['POST'])
+def postSlackAPI():
+    data = request.get_json()
+    return data["challenge"]
+    
