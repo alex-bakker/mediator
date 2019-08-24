@@ -78,4 +78,4 @@ def postSlackAPI():
         db.session.commit()
         updateUserScore(user_id, data['event']['text'])
     elif request_type == "channel_rename":
-        pass
+        
