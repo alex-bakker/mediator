@@ -1,5 +1,16 @@
 import boto3
 import json
+from flask import Flask
+from flask_cors import CORS
+from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
+
+app = Flask(__name__)
+db = SQLAlchemy(app)
+
+CORS(app)
+
+migrate = Migrate(app, db)
 
 comprehend = boto3.client(service_name='comprehend', region_name='ca-central-1')
 
