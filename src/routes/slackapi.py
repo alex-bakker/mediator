@@ -16,9 +16,6 @@ def handleChannel(cid):
         new_channel = Channel(cid=cid, channel_name=channel_name)
         db.session.add(new_channel)
      
-
-
-
 # Handle the case when the user sending the message is not currently in the db.     
 def handleUser(uid):
     user = db.session.query(User).filter(User.uid==uid).first()
@@ -40,9 +37,12 @@ def getUserEmail(uid):
 def postSlackAPI():
     data = request.get_json()
     request_type = data["event"]["type"]
-    if request_type == "message":
+    if request_type == "channel_rename":
+        channel = db.session.query(Channel).filter(Channel.cid == data["event"]["channel"]["id"]).update({'channel_name': data["event"]["channel"]["name"]})
+        db.session.commit()
+    elif request_type == "message":
         handleUser(data['event']['user'])
         handleChannel(data["event"]["channel"])
         db.session.commit()
-    elif request_type == "channel_rename":
-        pass
+    return "Warm"
+        
