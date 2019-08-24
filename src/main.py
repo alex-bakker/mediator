@@ -7,6 +7,8 @@ from flask_cors import CORS
 from flask_migrate import Migrate
 from config import getConfig
 
+from routes.slackapi import slackapi
+
 #Load our configuration
 config = getConfig()
 
@@ -31,6 +33,8 @@ for document in response.documents:
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgres+psycopg2://qa:qatest@localhost:5432/mediator'
 CORS(app)
+
+app.register_blueprint(slackapi, url_prefix='/slackapi')
 
 from models import db
 
