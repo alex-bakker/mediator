@@ -15,7 +15,7 @@ def handleChannel(cid):
         channel_name = channel_info["channel"]["name"]
         new_channel = Channel(cid=cid, channel_name=channel_name)
         db.session.add(new_channel)
-        db.session.commit()
+     
 
 
 
@@ -26,13 +26,13 @@ def handleUser(uid):
         email = getUserEmail(uid)
         user = User(uid=uid, user_name=email)
         db.session.add(user)
-        db.commit()
+      
 
 # Get the user email based on their UID.
 def getUserEmail(uid):
     token = getConfig().slack_token
     slack_api = getConfig().slack_api
-    r = requests.get(slack_api + "user.info", params={"token":token, "user":uid} )
+    r = requests.get(slack_api + "users.info", params={"token":token, "user":uid}).json()
     return r['user']['profile']['email']
 
 
@@ -41,7 +41,8 @@ def postSlackAPI():
     data = request.get_json()
     request_type = data["event"]["type"]
     if request_type == "message":
-        handleUser()
+        handleUser(data['event']['user'])
         handleChannel(data["event"]["channel"])
+        db.session.commit()
     elif request_type == "channel_rename":
         pass
