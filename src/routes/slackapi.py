@@ -8,12 +8,16 @@ slackapi = Blueprint('slackapi', __name__)
 
 def handleChannel(cid):
     channel = db.session.query(Channel).filter(Channel.cid == cid).first()
-    print(channel)
     if channel is None:
         token = getConfig().slack_token
         slack_api = getConfig().slack_api
-        channel_info = requests.get(slack_api + "channels.info", params={"token":token, "channel":cid} )
-        print(channel_info)
+        channel_info = requests.get(slack_api + "channels.info", params={"token":token, "channel":cid} ).json()
+        channel_name = channel_info["channel"]["name"]
+        new_channel = Channel(cid=cid, channel_name=channel_name)
+        db.session.add(new_channel)
+        db.session.commit()
+
+
 
 # Handle the case when the user sending the message is not currently in the db.     
 def handleUser(uid):
