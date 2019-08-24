@@ -6,6 +6,7 @@ from models import Channel, User
 
 slackapi = Blueprint('slackapi', __name__)
 
+# Handle the case when a new channel is messaged in for the first time.
 def handleChannel(cid):
     channel = db.session.query(Channel).filter(Channel.cid == cid).first()
     if channel is None:
@@ -16,8 +17,6 @@ def handleChannel(cid):
         new_channel = Channel(cid=cid, channel_name=channel_name)
         db.session.add(new_channel)
      
-
-
 
 # Handle the case when the user sending the message is not currently in the db.     
 def handleUser(uid):

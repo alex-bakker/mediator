@@ -19,15 +19,22 @@ class Channel(db.Model):
     cid = db.Column(db.Text, nullable=False)
     channel_name = db.Column(db.Text, nullable=False)
 
-class Score(db.Model):
-    __tablename__ = 'score'
+class UserScore(db.Model):
+    __tablename__ = 'user_score'
 
     id = db.Column(db.Integer, primary_key=True)
     daily_average = db.Column(db.Integer, nullable=False)
     date = db.Column(db.Date, nullable=False)
     uid = db.Column(db.ForeignKey('user.id'))
-    cid = db.Column(db.ForeignKey('channel.id'))
 
     user = relationship('User')
-    channel = relationship('Channel')
     
+class ChannelScore(db.Model):
+    __tablename__ = 'channel_score'
+
+    id = db.Column(db.Integer, primary_key=True)
+    daily_average = db.Column(db.Integer, nullable=False)
+    date = db.Column(db.Date, nullable=False)
+    cid = db.Column(db.ForeignKey('channel.id'))
+
+    channel = relationship('Channel')
