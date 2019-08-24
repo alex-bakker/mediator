@@ -1,14 +1,36 @@
-from flask import Blueprint, request
-from models import db, User
 import requests
+from flask import Blueprint, request
+from models import db
+from config import getConfig
+from models import Channel, User
 
 slackapi = Blueprint('slackapi', __name__)
 
-def handleUser():
-    pass
+def handleChannel(cid):
+    channel = db.session.query(Channel).filter(Channel.cid == cid).first()
+    print(channel)
+    if channel is None:
+        token = getConfig().slack_token
+        slack_api = getConfig().slack_api
+        channel_info = requests.get(slack_api + "channels.info", params={"token":token, "channel":cid} )
+        print(channel_info)
 
-def handleChannel():
-    pass
+# Handle the case when the user sending the message is not currently in the db.     
+def handleUser(uid):
+    user = db.session.query(User).filter(User.uid==uid).first()
+    if user is None:
+        email = getUserEmail(uid)
+        user = User(uid=uid, user_name=email)
+        db.session.add(user)
+        db.commit()
+
+# Get the user email based on their UID.
+def getUserEmail(uid):
+    token = getConfig().slack_token
+    slack_api = getConfig().slack_api
+    r = requests.get(slack_api + "user.info", params={"token":token, "user":uid} )
+    return r['user']['profile']['email']
+
 
 @slackapi.route('/', methods=['POST'])
 def postSlackAPI():
@@ -16,17 +38,6 @@ def postSlackAPI():
     request_type = data["event"]["type"]
     if request_type == "message":
         handleUser()
-        handleChannel()
+        handleChannel(data["event"]["channel"])
     elif request_type == "channel_rename":
         pass
-
-
-def handleUser(token):
-    email = getUserEmail(token)
-    user = db.session.query(User).filter(User.user_name==email).first()
-    print(user)
-
-def getUserEmail(token):
-    URL = 'https://slack.com/api/users.identity.email'
-    params = {'token' : token}
-    return requests.get(URL, params=params)
