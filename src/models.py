@@ -26,7 +26,7 @@ class UserScore(db.Model):
     daily_average = db.Column(db.Integer, nullable=False)
     date = db.Column(db.Date, nullable=False)
     total = db.Column(db.Integer, nullable=False)
-    uid = db.Column(db.ForeignKey('user.id'))
+    user_id = db.Column(db.ForeignKey('user.id'))
 
     user = relationship('User')
     
