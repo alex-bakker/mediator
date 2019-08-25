@@ -26,6 +26,15 @@ class UScore(object):
     def toJson(self):
         return {"daily_average" : self.daily_average, "date": self.date, "email": self.user_email}
 
+class CScore(object):
+    def __init__(self, us, name):
+        self.daily_average = us.daily_average
+        self.date = us.date.strftime("%Y-%m-%d")
+        self.channel_name = name
+        
+    def toJson(self):
+        return {"daily_average" : self.daily_average, "date": self.date, "channel_name": self.channel_name}
+
 @slackapi.route('/user', methods=['POST'])
 def getUser():
     params = request.form['text'].split(' ')
@@ -34,25 +43,52 @@ def getUser():
     if len(params) == 2:
         user_email = params[0]
         timeframe = params[1]
-    elif len(params) == 1:
-        if params[0] == '':
-            return "Hey! Please provide a timeframe or a timeframe and an email!"
-        timeframe = params[0]
     else:
-        return "Hey! Please provide a timeframe or a timeframe and an email!"
+        return "Hey! Please provide a timeframe and an email!"
 
-    if user_email is not None and user_email != "":
+    time = 1
+    if timeframe == "month":
+        time = 30
+    elif timeframe == "week":
+        time = 7
+
+    try:
         id = db.session.query(User).filter(User.user_name == user_email).first().id
-        time = 1
-        if timeframe == "month":
-            time = 30
-        elif timeframe == "week":
-            time = 7
         results = db.session.query(UserScore).filter(UserScore.user_id == id).order_by(desc(UserScore.id)).limit(time).all()
         newobjects = []
         for result in results:
             newobjects.append(UScore(result, user_email).toJson())
         return jsonify(newobjects)
+    except Exception:
+        return "No data has been collected on that user yet! :("
+
+
+@slackapi.route('/channel', methods=['POST'])
+def getChannel():
+    params = request.form['text'].split(' ')
+    timeframe = ""
+    channel_name = ""
+    if len(params) == 2:
+        channel_name = params[0]
+        timeframe = params[1]
+    else:
+        return "Hey! Please provide a timeframe and a channel name!"
+
+    time = 1
+    if timeframe == "month":
+        time = 30
+    elif timeframe == "week":
+        time = 7
+
+    try:
+        id = db.session.query(Channel).filter(Channel.channel_name == channel_name).first().id
+        results = db.session.query(ChannelScore).filter(ChannelScore.channel_id == id).order_by(desc(ChannelScore.id)).limit(time).all()
+        newobjects = []
+        for result in results:
+            newobjects.append(CScore(result, channel_name).toJson())
+        return jsonify(newobjects)
+    except Exception:
+        return "No data has been collected on that channel yet! :("
 
 # Handle the case when a new channel is messaged in for the first time.
 def handleChannel(cid):
