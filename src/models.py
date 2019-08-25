@@ -36,6 +36,7 @@ class ChannelScore(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     daily_average = db.Column(db.Integer, nullable=False)
     date = db.Column(db.Date, nullable=False)
-    cid = db.Column(db.ForeignKey('channel.id'))
+    total = db.Column(db.Integer, nullable=False)
+    channel_id = db.Column(db.ForeignKey('channel.id'))
 
     channel = relationship('Channel')

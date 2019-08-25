@@ -1,11 +1,13 @@
 import requests
 from flask import Blueprint, request, Response
+from sqlalchemy import desc
 from models import db
 from config import getConfig
-from models import Channel, User, UserScore
+from models import Channel, User, UserScore, ChannelScore
 from datetime import date
 from azure.cognitiveservices.language.textanalytics import TextAnalyticsClient
 from msrest.authentication import CognitiveServicesCredentials
+from flask import jsonify
 
 config = getConfig()
 
@@ -15,6 +17,43 @@ text_analytics = TextAnalyticsClient(endpoint=config.text_analytics_url, credent
 
 slackapi = Blueprint('slackapi', __name__)
 
+class UScore(object):
+    def __init__(self, us, email):
+        self.daily_average = us.daily_average
+        self.date = us.date.strftime("%Y-%m-%d")
+        self.user_email = email
+        
+    def toJson(self):
+        return {"daily_average" : self.daily_average, "date": self.date, "email": self.user_email}
+
+@slackapi.route('/user', methods=['POST'])
+def getUser():
+    params = request.form['text'].split(' ')
+    timeframe = ""
+    user_email = ""
+    if len(params) == 2:
+        user_email = params[0]
+        timeframe = params[1]
+    elif len(params) == 1:
+        if params[0] == '':
+            return "Hey! Please provide a timeframe or a timeframe and an email!"
+        timeframe = params[0]
+    else:
+        return "Hey! Please provide a timeframe or a timeframe and an email!"
+
+    if user_email is not None and user_email != "":
+        id = db.session.query(User).filter(User.user_name == user_email).first().id
+        time = 1
+        if timeframe == "month":
+            time = 30
+        elif timeframe == "week":
+            time = 7
+        results = db.session.query(UserScore).filter(UserScore.user_id == id).order_by(desc(UserScore.id)).limit(time).all()
+        newobjects = []
+        for result in results:
+            newobjects.append(UScore(result, user_email).toJson())
+        return jsonify(newobjects)
+
 # Handle the case when a new channel is messaged in for the first time.
 def handleChannel(cid):
     channel = db.session.query(Channel).filter(Channel.cid == cid).first()
@@ -23,8 +62,9 @@ def handleChannel(cid):
         slack_api = config.slack_api
         channel_info = requests.get(slack_api + "channels.info", params={"token":token, "channel":cid} ).json()
         channel_name = channel_info["channel"]["name"]
-        new_channel = Channel(cid=cid, channel_name=channel_name)
-        db.session.add(new_channel)
+        channel = Channel(cid=cid, channel_name=channel_name)
+        db.session.add(channel)
+        db.session.commit()
     return channel.id
      
 
@@ -55,19 +95,29 @@ def getSentiment(msg):
         "text": msg
     }]
     sentiment = text_analytics.sentiment(documents=text)
-    print('==============================')
-    print(sentiment.documents[0].score)
-    print('==============================')
     return text_analytics.sentiment(documents=text)
 
 # Update the users daily score.
-def updateUserScore(user_id, text):
-    sentiment = getSentiment(text)
+def updateUserScore(user_id, sentiment):
     cur_record_query = db.session.query(UserScore).filter(UserScore.user_id == user_id).filter(UserScore.date == date.today())
     cur_record = cur_record_query.first()
     if cur_record is None:
         user_score_record = UserScore(daily_average=int(float(sentiment.documents[0].score)*100), date=date.today(), total=1, user_id=user_id)
         db.session.add(user_score_record)
+    else:
+        score_as_int = float(sentiment.documents[0].score) * 100
+        daily_average = score_as_int + (cur_record.daily_average * cur_record.total)
+        daily_average = int(daily_average / (cur_record.total + 1))
+        cur_record_query.update({"daily_average": daily_average, "total": cur_record.total + 1})
+    db.session.commit()
+
+# Update the channels daily score.
+def updateChannelScore(channel_id, sentiment):
+    cur_record_query = db.session.query(ChannelScore).filter(ChannelScore.channel_id == channel_id).filter(ChannelScore.date == date.today())
+    cur_record = cur_record_query.first()
+    if cur_record is None:
+        channel_score_record = ChannelScore(daily_average=int(float(sentiment.documents[0].score)*100), date=date.today(), total=1, channel_id=channel_id)
+        db.session.add(channel_score_record)
     else:
         score_as_int = float(sentiment.documents[0].score) * 100
         daily_average = score_as_int + (cur_record.daily_average * cur_record.total)
@@ -86,7 +136,9 @@ def postSlackAPI():
         user_id = handleUser(data['event']['user'])
         channel_id = handleChannel(data["event"]["channel"])
         db.session.commit()
-        updateUserScore(user_id, data['event']['text'])
+        sentiment = getSentiment(data['event']['text'])
+        updateUserScore(user_id, sentiment)
+        updateChannelScore(channel_id, sentiment) 
     resp = Response('Warm')
     resp.headers['X-Slack-No-Retry'] = '1'
     return resp
