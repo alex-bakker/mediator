@@ -33,6 +33,7 @@ def showOverview():
 
 
         digest = 'Channels to look out for include: ' + user_list + channel_list
+    return digest
     
 
 @slackapi.route('/user', methods=['POST'])
