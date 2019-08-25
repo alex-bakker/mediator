@@ -17,7 +17,7 @@ text_analytics = TextAnalyticsClient(endpoint=config.text_analytics_url, credent
 
 slackapi = Blueprint('slackapi', __name__)
 
-@slackapi.route('/overview')
+@slackapi.route('/overview', methods=["POST"])
 def showOverview():
     try:
         users = db.session.query(UserScore).filter(UserScore.date == date.today()).order_by(asc(UserScore.id)).limit(3).all()
@@ -25,15 +25,19 @@ def showOverview():
 
         user_list = ''
         for user in users:
-            user_list += '\n' + db.session.query(User).filter(User.id == user.user_id).first().email + ' : ' + user.daily_average
+            user_list += '\n' + db.session.query(User).filter(User.id == user.user_id).first().user_name + ' : ' + str(user.daily_average)
 
         channel_list = ''
         for channel in channels:
-            channel_list += '\n' + db.session.query(Channel).filter(Channel.id == channel.channel_id).first().channel_name + ' : ' + channel.daily_average
+            channel_list += '\n' + db.session.query(Channel).filter(Channel.id == channel.channel_id).first().channel_name + ' : ' + str(channel.daily_average)
 
 
-        digest = 'Channels to look out for include: ' + user_list + channel_list
-    return digest
+        digest = 'Channels to look out for include: ' + channel_list + '\n\nUsers who may be stressed: ' + user_list
+
+        return digest
+    except Exception as e:
+        print(e)
+        return "Something went wrong unfortunately"
     
 
 @slackapi.route('/user', methods=['POST'])
