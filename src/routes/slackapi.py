@@ -17,24 +17,6 @@ text_analytics = TextAnalyticsClient(endpoint=config.text_analytics_url, credent
 
 slackapi = Blueprint('slackapi', __name__)
 
-class UScore(object):
-    def __init__(self, us, email):
-        self.daily_average = us.daily_average
-        self.date = us.date.strftime("%Y-%m-%d")
-        self.user_email = email
-        
-    def toJson(self):
-        return {"daily_average" : self.daily_average, "date": self.date, "email": self.user_email}
-
-class CScore(object):
-    def __init__(self, us, name):
-        self.daily_average = us.daily_average
-        self.date = us.date.strftime("%Y-%m-%d")
-        self.channel_name = name
-        
-    def toJson(self):
-        return {"daily_average" : self.daily_average, "date": self.date, "channel_name": self.channel_name}
-
 @slackapi.route('/user', methods=['POST'])
 def getUser():
     params = request.form['text'].split(' ')
@@ -55,10 +37,16 @@ def getUser():
     try:
         id = db.session.query(User).filter(User.user_name == user_email).first().id
         results = db.session.query(UserScore).filter(UserScore.user_id == id).order_by(desc(UserScore.id)).limit(time).all()
-        newobjects = []
+        
+        sum_of_avg = 0
+        num_of_records = len(results)
+        
         for result in results:
-            newobjects.append(UScore(result, user_email).toJson())
-        return jsonify(newobjects)
+            sum_of_avg += result.daily_average
+
+        total_avg = sum_of_avg / num_of_records
+        return 'User ' + user_email + ' had a score of ' + total_avg + ', this ' + timeframe
+
     except Exception:
         return "No data has been collected on that user yet! :("
 
@@ -80,15 +68,24 @@ def getChannel():
     elif timeframe == "week":
         time = 7
 
+    timeframe = 'day'
+
     try:
         id = db.session.query(Channel).filter(Channel.channel_name == channel_name).first().id
         results = db.session.query(ChannelScore).filter(ChannelScore.channel_id == id).order_by(desc(ChannelScore.id)).limit(time).all()
-        newobjects = []
+
+        sum_of_avg = 0
+        num_of_records = len(results)
+        
         for result in results:
-            newobjects.append(CScore(result, channel_name).toJson())
-        return jsonify(newobjects)
+            sum_of_avg += result.daily_average
+
+        total_avg = sum_of_avg / num_of_records
+        return 'Channel ' + channel_name + ' had a score of ' + total_avg + ', this ' + timeframe
+
     except Exception:
         return "No data has been collected on that channel yet! :("
+
 
 # Handle the case when a new channel is messaged in for the first time.
 def handleChannel(cid):
