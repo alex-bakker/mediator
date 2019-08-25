@@ -33,6 +33,8 @@ def getUser():
         time = 30
     elif timeframe == "week":
         time = 7
+    else:
+        timeframe = 'day'
 
     try:
         id = db.session.query(User).filter(User.user_name == user_email).first().id
@@ -45,10 +47,19 @@ def getUser():
             sum_of_avg += result.daily_average
 
         total_avg = sum_of_avg / num_of_records
-        return 'User ' + user_email + ' had a score of ' + total_avg + ', this ' + timeframe
+
+        emote = ""
+        if total_avg > 75:
+            emote = ":heart_eyes:"
+        elif total_avg > 50:
+            emote = ":blush:"
+        else:
+            emote = ":tired_face:"
+
+        return 'User ' + user_email + ' had a score of ' + str(total_avg) + ', this ' + timeframe + " " + emote
 
     except Exception:
-        return "No data has been collected on that user yet! :("
+        return "No data has been collected on that user yet! 😢"
 
 
 @slackapi.route('/channel', methods=['POST'])
@@ -67,8 +78,8 @@ def getChannel():
         time = 30
     elif timeframe == "week":
         time = 7
-
-    timeframe = 'day'
+    else:
+        timeframe = 'day'
 
     try:
         id = db.session.query(Channel).filter(Channel.channel_name == channel_name).first().id
@@ -81,10 +92,19 @@ def getChannel():
             sum_of_avg += result.daily_average
 
         total_avg = sum_of_avg / num_of_records
-        return 'Channel ' + channel_name + ' had a score of ' + total_avg + ', this ' + timeframe
+
+        emote = ""
+        if total_avg > 75:
+            emote = ":heart_eyes:"
+        elif total_avg > 50:
+            emote = ":blush:"
+        else:
+            emote = ":tired_face:"
+
+        return 'Channel ' + channel_name + ' had a score of ' + str(total_avg) + ', this ' + timeframe + " " + emote
 
     except Exception:
-        return "No data has been collected on that channel yet! :("
+        return "No data has been collected on that channel yet! 😢"
 
 
 # Handle the case when a new channel is messaged in for the first time.
