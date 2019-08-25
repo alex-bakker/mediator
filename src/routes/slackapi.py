@@ -1,6 +1,6 @@
 import requests
 from flask import Blueprint, request, Response
-from sqlalchemy import desc
+from sqlalchemy import desc, asc
 from models import db
 from config import getConfig
 from models import Channel, User, UserScore, ChannelScore
@@ -16,6 +16,24 @@ credentials = CognitiveServicesCredentials(config.azure_key)
 text_analytics = TextAnalyticsClient(endpoint=config.text_analytics_url, credentials=credentials)
 
 slackapi = Blueprint('slackapi', __name__)
+
+@slackapi.route('/overview')
+def showOverview():
+    try:
+        users = db.session.query(UserScore).filter(UserScore.date == date.today()).order_by(asc(UserScore.id)).limit(3).all()
+        channels = db.session.query(ChannelScore).filter(ChannelScore.date == date.today()).order_by(asc(ChannelScore.id)).limit(3).all()
+
+        user_list = ''
+        for user in users:
+            user_list += '\n' + db.session.query(User).filter(User.id == user.user_id).first().email + ' : ' + user.daily_average
+
+        channel_list = ''
+        for channel in channels:
+            channel_list += '\n' + db.session.query(Channel).filter(Channel.id == channel.channel_id).first().channel_name + ' : ' + channel.daily_average
+
+
+        digest = 'Channels to look out for include: ' + user_list + channel_list
+    
 
 @slackapi.route('/user', methods=['POST'])
 def getUser():
